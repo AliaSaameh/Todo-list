@@ -3,13 +3,17 @@ package com.example.todolist.controllers
 import com.example.todolist.repositories.Repo
 import com.example.todolist.model.Lists
 import org.springframework.data.domain.Sort
+import org.springframework.data.domain.Sort.Direction
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+
+
 
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-
+//import java.time.Instant
+//import java.time.LocalDate
 
 
 @RestController
@@ -21,21 +25,30 @@ class ListControllers (private val todoRepository : Repo ){
     fun handleNotFound(e:NoSuchElementException):ResponseEntity<String> =
         ResponseEntity(e.message, HttpStatus.NOT_FOUND)
 
-    @GetMapping
-    fun read():List<Lists>{
-        return todoRepository.findAll(Sort.by(Sort.Order.asc("order")))
+
+
+    @GetMapping ("/{id}")
+    fun getList(@PathVariable id: String):Lists?{
+        return todoRepository.findById(id).orElse(null)
+
     }
 
 
-    @GetMapping("/createddate")
-    fun getByDateCreated():List<Lists>{
-        return todoRepository.findAll(Sort.by(Sort.Order.desc("createdDate")))
+    @GetMapping ("/lists")
+    fun getAllLists(
+
+        @RequestParam(name = "sortBy", defaultValue = "createdDate") sortBy: String,
+        @RequestParam(name = "sortDirection", defaultValue = "asc") sortDirection: String,
+
+        ):List<Lists>{
+
+        val sort = Sort.by(Sort.Order(Direction.fromString(sortDirection), sortBy))
+
+        return todoRepository.findAll(sort)
+
+
     }
 
-    @GetMapping("/deliverydate")
-    fun getByDeliveryDate():List<Lists>{
-        return todoRepository.findAll(Sort.by(Sort.Order.asc("Delivery_date")))
-    }
 
     @PostMapping
     fun create(@RequestBody todoItem: Lists): Lists{
@@ -45,15 +58,18 @@ class ListControllers (private val todoRepository : Repo ){
     @PutMapping("/{id}")
     fun update(@PathVariable id: String, @RequestBody updatedItem: Lists):Lists{
         val existingItem = todoRepository.findById(updatedItem.id).orElse(null)
-                ?:throw NoSuchElementException("There is No List with this Id")
+            ?:throw NoSuchElementException("There is No List with this Id")
 
-//          val todoItem = existingItem.get()
-       existingItem.id = updatedItem.id
-       existingItem.title = updatedItem.title
-       existingItem.done = updatedItem.done
-        existingItem.order = updatedItem.order
-        //existingItem.createdDate = updatedItem.createdDate
-        existingItem.deliveryDate = updatedItem.deliveryDate
+        /* existingItem.id = updatedItem.id
+         existingItem.title = updatedItem.title
+         existingItem.done = updatedItem.done
+         existingItem.order = updatedItem.order
+         existingItem.deliveryDate = updatedItem.deliveryDate*/
+
+        updatedItem.title?.let { existingItem.title = it }
+        updatedItem.done?.let { existingItem.done = it }
+        updatedItem.order?.let { existingItem.order = it }
+        updatedItem.deliveryDate?.let { existingItem.deliveryDate = it }
 
         return todoRepository.save(existingItem)
 
@@ -62,5 +78,10 @@ class ListControllers (private val todoRepository : Repo ){
     @DeleteMapping("/{id}")
     fun delete(@PathVariable id: String){
         todoRepository.deleteById(id)
+    }
+
+   @DeleteMapping("/all")
+    fun deleteAll() {
+        todoRepository.deleteAll()
     }
 }
